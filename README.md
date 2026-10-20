@@ -87,14 +87,19 @@ JWT_SECRET=$(openssl rand -base64 48) docker compose up
 4. **Добавьте секрет.** В **Settings → Environment Variables** создайте
    `JWT_SECRET` (минимум 32 символа) для всех окружений.
 
-5. **Примените миграции.** С локальной машины, подставив рабочую строку
-   подключения:
+5. **Примените миграции.** С локальной машины, подставив строку подключения
+   к созданной базе:
 
    ```bash
    vercel env pull .env.local
    npm run db:migrate
    npm run db:seed
    ```
+
+   Для миграций лучше брать прямое подключение без пулера — интеграция Vercel
+   кладёт его в `DATABASE_URL_UNPOOLED`. Если `vercel env pull` недоступен,
+   скопируйте строку из панели Vercel в `.env.local` вручную и допишите туда же
+   `JWT_SECRET` и данные `SEED_SUPERADMIN_*`.
 
 6. **Проверьте деплой.** Откройте `https://<ваш-проект>.vercel.app/api/health` —
    должно вернуться `{"status":"ok","checks":{"database":"ok","redis":"ok"}}`.
