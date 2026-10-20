@@ -1,0 +1,70 @@
+# Локальный запуск фуллстек-приложения вместе с Postgres.
+#
+# Это альтернатива деплою на Vercel — для разработки без интернета или для
+# self-hosted развёртывания. Основной сценарий (Vercel + Neon + Upstash)
+# описан в README.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: tfz-postgres
+    environment:
+      POSTGRES_USER: tfz
+      POSTGRES_PASSWORD: tfz
+      POSTGRES_DB: tfz
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tfz -d tfz"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    # Совместимый с Upstash REST-интерфейс: тот же клиент работает и локально,
+    # и в облаке. В продакшене используйте Upstash — у него есть бесплатный тариф.
+    image: hiett/serverless-redis-http:latest
+    container_name: tfz-redis-http
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: local-dev-token
+      SRH_CONNECTION_STRING: "redis://redis-backend:6379"
+    ports:
+      - "8079:80"
+    depends_on:
+      redis-backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis-backend:
+    image: redis:7-alpine
+    container_name: tfz-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    container_name: tfz-app
+    build:
+      context: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://tfz:tfz@postgres:5432/tfz
+      DB_DRIVER: pg
+      JWT_SECRET: ${JWT_SECRET:?задайте JWT_SECRET, минимум 32 символа}
+      UPSTASH_REDIS_REST_URL: http://redis:80
+      UPSTASH_REDIS_REST_TOKEN: local-dev-token
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
