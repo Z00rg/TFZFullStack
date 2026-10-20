@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+    accountActivationSchema,
     calculateRequestSchema,
     createPatientSchema,
     loginSchema,
@@ -248,6 +249,10 @@ export function buildOpenApiDocument() {
                 post: {
                     tags: ["Auth"],
                     summary: "Регистрация сотрудника",
+                    description:
+                        "Создаёт неактивную учётную запись: доступ к данным " +
+                        "пациентов появляется только после подтверждения " +
+                        "администратором через PATCH /accounts/{id}.",
                     security: [],
                     requestBody: {
                         required: true,
@@ -308,6 +313,30 @@ export function buildOpenApiDocument() {
                             content: jsonContent(accountResponse),
                         },
                         ...errors(401),
+                    },
+                },
+            },
+            "/accounts/{id}": {
+                parameters: [idParam("id", "Идентификатор пользователя")],
+                patch: {
+                    tags: ["Workers"],
+                    summary: "Подтверждение или блокировка учётной записи",
+                    description:
+                        "Самостоятельная регистрация создаёт неактивный аккаунт; " +
+                        "доступ открывает администратор. При блокировке активные " +
+                        "сессии пользователя обрываются немедленно. " +
+                        "Администратор может управлять только сотрудниками, " +
+                        "главный администратор — всеми, кроме себя.",
+                    requestBody: {
+                        required: true,
+                        content: jsonContent(toSchema(accountActivationSchema)),
+                    },
+                    responses: {
+                        "200": {
+                            description: "Статус изменён",
+                            content: jsonContent(accountResponse),
+                        },
+                        ...errors(400, 401, 403, 404),
                     },
                 },
             },

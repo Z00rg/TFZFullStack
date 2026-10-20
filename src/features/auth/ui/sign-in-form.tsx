@@ -8,7 +8,8 @@ import {UiLink} from "@/shared/ui/ui-link";
 import {ROUTES} from "@/shared/constants/routes";
 
 export function SignInForm() {
-    const {register, handleSubmit, errorMessage, isPending} = useSignInForm();
+    const {register, handleSubmit, errorMessage, isPending, isAwaitingApproval} =
+        useSignInForm();
 
     return (
         <form
@@ -22,6 +23,18 @@ export function SignInForm() {
                     Войдите в свой аккаунт для продолжения
                 </p>
             </div>
+
+            {/* Регистрация принята, но доступ открывает администратор */}
+            {isAwaitingApproval && (
+                <div className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-800">
+                    <p className="font-semibold">Заявка отправлена</p>
+                    <p className="mt-1 leading-relaxed">
+                        Учётная запись создана, но вход откроется только после
+                        подтверждения администратором. Это сделано, чтобы доступ
+                        к данным пациентов не мог получить посторонний.
+                    </p>
+                </div>
+            )}
 
             {/* Поля формы */}
             <div className="flex flex-col gap-4">

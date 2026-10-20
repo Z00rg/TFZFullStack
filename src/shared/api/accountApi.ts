@@ -50,6 +50,17 @@ export const updateWorkerProfile = (
         options,
     );
 
+/** Подтверждение или блокировка учётной записи (только для администраторов). */
+export const setAccountActive = (
+    id: number,
+    isActive: boolean,
+    options?: RequestOptions,
+) =>
+    createInstance<Account>(
+        { url: `/accounts/${id}`, method: "PATCH", data: { is_active: isActive } },
+        options,
+    );
+
 export const deleteWorkerProfile = (id: number, options?: RequestOptions) =>
     createInstance<void>(
         { url: `/worker-profiles/${id}`, method: "DELETE" },
@@ -86,6 +97,7 @@ export const registerSuperAdmin = (
 export const accountApi = {
     getProfileInfo,
     getWorkerProfiles,
+    setAccountActive,
     updateWorkerProfile,
     deleteWorkerProfile,
     registerAdmin,

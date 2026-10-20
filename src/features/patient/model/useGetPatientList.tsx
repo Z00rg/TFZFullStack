@@ -1,17 +1,18 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { usePatientListQuery } from "@/entities/patient";
-import type { Patient } from "@/shared/api/patientApi";
 
 /**
- * Список пациентов с выбором и поиском.
+ * Список пациентов с поиском.
  *
  * Фильтрация делается на клиенте: список пациентов одной клиники невелик,
  * а запрос к API на каждое нажатие клавиши того не стоит.
+ *
+ * Выбранного пациента хук не хранит — это состояние страницы: от него
+ * зависят и карточка, и история приёмов, поэтому владеть им должен тот,
+ * кто рисует всё вместе.
  */
 export function useGetPatientList(searchTerm = "") {
-    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-
     const patientListQuery = usePatientListQuery();
     const data = patientListQuery.data;
 
@@ -31,8 +32,6 @@ export function useGetPatientList(searchTerm = "") {
     return {
         patientList: filteredPatientList,
         totalCount: data?.length ?? 0,
-        selectedPatient,
-        setSelectedPatient,
         isLoading: patientListQuery.isPending,
         isError: patientListQuery.isError,
     };

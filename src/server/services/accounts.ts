@@ -105,6 +105,12 @@ export interface CreateAccountParams {
     patronymic?: string;
     password: string;
     role: AccountRole;
+    /**
+     * Активен ли аккаунт сразу. Самостоятельная регистрация создаёт
+     * неактивную запись — до подтверждения администратором такой
+     * пользователь не видит картотеку пациентов.
+     */
+    isActive?: boolean;
     /** Профиль сотрудника создаётся только для роли WORKER. */
     workerProfile?: { work: string; position: string };
 }
@@ -135,7 +141,7 @@ export async function createAccount(
                 surname: params.surname,
                 patronymic: params.patronymic ?? "",
                 role: params.role,
-                isActive: true,
+                isActive: params.isActive ?? true,
                 isStaff: flags.isStaff,
                 isSuperuser: flags.isSuperuser,
             })
@@ -181,6 +187,28 @@ export async function updateWorkerProfile(
         .returning();
 
     return { profile, account: existing.account };
+}
+
+/**
+ * Включение и отключение учётной записи.
+ *
+ * Используется администратором для подтверждения самостоятельно
+ * зарегистрировавшихся врачей и для блокировки уволившихся.
+ */
+export async function setAccountActive(
+    id: number,
+    isActive: boolean,
+): Promise<Account> {
+    const [account] = await db
+        .update(accounts)
+        .set({ isActive, updatedAt: new Date() })
+        .where(eq(accounts.id, id))
+        .returning();
+
+    if (!account) {
+        throw ApiError.notFound("Пользователь не найден");
+    }
+    return account;
 }
 
 export async function deleteWorkerProfile(id: number): Promise<void> {

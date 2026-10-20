@@ -141,7 +141,9 @@ export function useSignUpForm() {
         localStorage.removeItem(SIGNUP_STAGE_KEY);
       }
       // Перенаправляем на страницу входа
-      router.replace(ROUTES.SIGN_IN);
+      // Пометка нужна, чтобы на странице входа объяснить, почему
+      // войти прямо сейчас не получится.
+      router.replace(`${ROUTES.SIGN_IN}?pending=1`);
     },
   });
 

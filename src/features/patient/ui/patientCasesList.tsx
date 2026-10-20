@@ -1,39 +1,44 @@
+import { useDeleteCaseMutation } from "@/entities/case";
 import { useGetPatientCasesList } from "@/features/patient/model/useGetPatientCasesList";
 import { PatientCaseCardSkeleton } from "@/shared/ui/Skeleton";
 import { Button } from "@/shared/ui/Button";
-import type { Patient, PatientCase } from "@/shared/api/patientApi";
+import type { PatientCase, Severity } from "@/shared/api/patientApi";
 import { UiModal } from "@/shared/ui/UiModal";
+import { ConfirmDialog } from "@/shared/ui/ConfirmDialog";
 import { CreateCaseForm } from "@/features/case/ui/createCaseForm";
 import { PatientCasesChart } from "@/features/patient/ui/PatientCasesChart";
 import { formatDateTime } from "@/shared/lib/format";
 
 type PatientCasesListProps = {
     selectedCase: PatientCase | null;
-    setSelectedCase: (selectedCase: PatientCase) => void;
     idPatient: number;
     onOpenCase: (patientCase: PatientCase) => void;
-    selectedPatient: Patient;
+    /** Вызывается, когда удалён приём, открытый в блоке результатов. */
+    onCaseDeleted: (deletedId: number) => void;
 };
 
-/** Подсветка степени тяжести — те же три градации, что и в расчёте. */
-const SEVERITY_STYLES: Record<string, string> = {
-    "лёгкая": "bg-emerald-100 text-emerald-800",
-    "средняя": "bg-amber-100 text-amber-800",
-    "тяжёлая": "bg-red-100 text-red-800",
+/** Цвета степеней тяжести заданы токенами — те же значения в блоке результатов. */
+const SEVERITY_STYLES: Record<Severity, string> = {
+    "лёгкая": "bg-severity-light-bg text-severity-light",
+    "средняя": "bg-severity-medium-bg text-severity-medium",
+    "тяжёлая": "bg-severity-heavy-bg text-severity-heavy",
 };
 
 export function PatientCasesList({
     selectedCase,
-    setSelectedCase,
     idPatient,
     onOpenCase,
+    onCaseDeleted,
 }: PatientCasesListProps) {
     const { patientCasesList, isError, isLoading } =
         useGetPatientCasesList(idPatient);
 
-    const handleCaseClick = (patientCase: PatientCase) => {
-        setSelectedCase(patientCase);
-        onOpenCase(patientCase);
+    const deleteCaseMutation = useDeleteCaseMutation();
+
+    const handleDelete = (patientCase: PatientCase) => {
+        deleteCaseMutation.mutate(patientCase.id, {
+            onSuccess: () => onCaseDeleted(patientCase.id),
+        });
     };
 
     const addCaseButton = (
@@ -41,7 +46,8 @@ export function PatientCasesList({
             button={
                 <Button
                     variant="secondary"
-                    className="w-full min-h-[60px] sm:h-23 text-3xl sm:text-4xl text-blue-800 font-medium bg-blue-100 hover:border hover:border-blue-500 hover:bg-blue-100"
+                    className="h-full min-h-[92px] w-full border-brand-200 bg-brand-50 text-3xl font-medium text-brand-700 hover:bg-brand-100"
+                    aria-label="Добавить приём"
                 >
                     +
                 </Button>
@@ -54,28 +60,22 @@ export function PatientCasesList({
     );
 
     return (
-        <div className="bg-gradient-to-r from-white to-gray-50 p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200/50">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
-                    Список приемов
-                </h2>
-            </div>
+        <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm sm:p-6">
+            <h2 className="mb-4 text-lg font-semibold text-ink">Список приёмов</h2>
 
-            {/* Состояние загрузки */}
             {isLoading && (
-                <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
                     {Array.from({ length: 6 }).map((_, index) => (
                         <PatientCaseCardSkeleton key={index} />
                     ))}
                 </div>
             )}
 
-            {/* Состояние ошибки */}
             {isError && !isLoading && (
-                <div className="p-6 sm:p-8 text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mb-3">
+                <div className="p-6 text-center sm:p-8">
+                    <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
                         <svg
-                            className="w-6 h-6 text-red-600"
+                            className="h-6 w-6 text-red-600"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -88,11 +88,11 @@ export function PatientCasesList({
                             />
                         </svg>
                     </div>
-                    <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1">
+                    <h3 className="mb-1 text-base font-medium text-ink">
                         Ошибка загрузки
                     </h3>
-                    <p className="text-xs sm:text-sm text-gray-500 mb-4">
-                        Не удалось загрузить список приемов
+                    <p className="mb-4 text-sm text-neutral-500">
+                        Не удалось загрузить список приёмов
                     </p>
                     <Button variant="secondary" onPress={() => window.location.reload()}>
                         Попробовать снова
@@ -100,12 +100,11 @@ export function PatientCasesList({
                 </div>
             )}
 
-            {/* Пустой список */}
             {!isLoading && !isError && patientCasesList.length === 0 && (
-                <div className="p-6 sm:p-8 text-center">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 mb-3">
+                <div className="p-6 text-center sm:p-8">
+                    <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand-50">
                         <svg
-                            className="w-6 h-6 text-blue-600"
+                            className="h-6 w-6 text-brand-500"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -118,60 +117,104 @@ export function PatientCasesList({
                             />
                         </svg>
                     </div>
-                    <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1">
-                        Приемы не найдены
+                    <h3 className="mb-1 text-base font-medium text-ink">
+                        Приёмы не найдены
                     </h3>
-                    <p className="text-xs sm:text-sm text-gray-500 mb-6 sm:mb-8">
-                        Добавьте первый прием, нажав кнопку ниже
+                    <p className="mb-6 text-sm text-neutral-500">
+                        Добавьте первый приём, нажав кнопку ниже
                     </p>
-                    <div className="w-full sm:w-1/2 mx-auto">{addCaseButton}</div>
+                    <div className="mx-auto w-full sm:w-1/2">{addCaseButton}</div>
                 </div>
             )}
 
-            {/* График динамики показателей */}
             {!isLoading && !isError && patientCasesList.length >= 2 && (
                 <PatientCasesChart cases={patientCasesList} />
             )}
 
-            {/* Список приемов */}
             {!isLoading && !isError && patientCasesList.length > 0 && (
-                <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-                    {patientCasesList.map((item) => (
-                        <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => handleCaseClick(item)}
-                            aria-pressed={selectedCase?.id === item.id}
-                            className={`p-3 sm:p-4 border rounded-lg text-left cursor-pointer transition-all duration-200 ${
-                                selectedCase?.id === item.id
-                                    ? "border-blue-500 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-inner"
-                                    : "border-gray-200 hover:bg-gray-50"
-                            }`}
-                        >
-                            <div className="flex flex-col gap-2">
-                                <h3 className="font-medium text-sm sm:text-base text-gray-800">
-                                    Прием от {formatDateTime(item.created_at)}
-                                </h3>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 whitespace-nowrap">
-                                        {item.mode === "dtz" ? "ДТЗ" : "МТЗ"}
-                                    </span>
-                                    <span
-                                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${
-                                            SEVERITY_STYLES[item.severity] ??
-                                            "bg-gray-100 text-gray-800"
-                                        }`}
-                                    >
-                                        {item.score} б. — {item.severity}
-                                    </span>
-                                </div>
+                <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+                    {patientCasesList.map((item) => {
+                        const isSelected = selectedCase?.id === item.id;
+
+                        return (
+                            /*
+                             * Кнопка удаления — сосед основной кнопки, а не её
+                             * потомок: вложенная кнопка невалидна в HTML и
+                             * ломает навигацию с клавиатуры.
+                             */
+                            <div key={item.id} className="group relative">
+                                <button
+                                    type="button"
+                                    onClick={() => onOpenCase(item)}
+                                    aria-pressed={isSelected}
+                                    className={`h-full w-full cursor-pointer rounded-lg border p-3 pr-10 text-left transition-colors duration-150 sm:p-4 sm:pr-10 ${
+                                        isSelected
+                                            ? "border-brand-500 bg-brand-50"
+                                            : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
+                                    }`}
+                                >
+                                    <h3 className="mb-2 text-sm font-medium text-ink sm:text-base">
+                                        Приём от {formatDateTime(item.created_at)}
+                                    </h3>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium whitespace-nowrap text-brand-700">
+                                            {item.mode === "dtz" ? "ДТЗ" : "МТЗ"}
+                                        </span>
+                                        <span
+                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
+                                                SEVERITY_STYLES[item.severity] ??
+                                                "bg-neutral-100 text-neutral-700"
+                                            }`}
+                                        >
+                                            {item.score} б. — {item.severity}
+                                        </span>
+                                    </div>
+                                </button>
+
+                                <ConfirmDialog
+                                    title="Удалить приём?"
+                                    description={
+                                        <>
+                                            Приём от{" "}
+                                            <strong>
+                                                {formatDateTime(item.created_at)}
+                                            </strong>{" "}
+                                            ({item.score} б. — {item.severity}) будет
+                                            удалён из истории пациента. Отменить это
+                                            действие нельзя.
+                                        </>
+                                    }
+                                    isPending={deleteCaseMutation.isPending}
+                                    onConfirm={() => handleDelete(item)}
+                                    trigger={
+                                        <Button
+                                            variant="quiet"
+                                            aria-label={`Удалить приём от ${formatDateTime(item.created_at)}`}
+                                            className="absolute top-2 right-2 h-8 w-8 p-0 text-neutral-400 opacity-0 transition hover:bg-red-50 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
+                                        >
+                                            <svg
+                                                className="h-4 w-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth={2}
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                />
+                                            </svg>
+                                        </Button>
+                                    }
+                                />
                             </div>
-                        </button>
-                    ))}
+                        );
+                    })}
 
                     {addCaseButton}
                 </div>
             )}
-        </div>
+        </section>
     );
 }

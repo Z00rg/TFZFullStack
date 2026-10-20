@@ -67,6 +67,28 @@ export function useDeleteCaseMutation({
                 queryKey: queryKeys.calculations.all,
             });
             onSuccessActions?.forEach((action) => action());
+
+            queue.add(
+                {
+                    title: "Приём удалён",
+                    description: "Расчёт убран из истории пациента",
+                    type: "success",
+                },
+                { timeout: 3000 },
+            );
+        },
+        onError: (error) => {
+            queue.add(
+                {
+                    title: "Приём не удалён",
+                    description: extractErrorMessage(
+                        error,
+                        "Не удалось удалить приём",
+                    ),
+                    type: "error",
+                },
+                { timeout: 5000 },
+            );
         },
     });
 }

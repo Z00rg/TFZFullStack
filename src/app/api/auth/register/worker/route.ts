@@ -10,9 +10,10 @@ import { workerRegistrationSchema } from "@/server/validation/schemas";
 /**
  * POST /api/auth/register/worker — перенос `WorkerRegisterView`.
  *
- * Регистрация открыта (как и в исходном проекте), поэтому прикрыта тем же
- * лимитом по IP, что и вход: иначе эндпоинт позволял бы бесконтрольно
- * создавать аккаунты.
+ * Регистрация открыта, но создаёт неактивную учётную запись: доступ к
+ * картотеке пациентов появляется только после подтверждения администратором.
+ * Дополнительно эндпоинт прикрыт тем же лимитом по IP, что и вход, — иначе
+ * он позволял бы бесконтрольно засорять список заявок.
  */
 export const POST = withApi(async (request) => {
     const { LOGIN_RATE_LIMIT, LOGIN_RATE_WINDOW_SECONDS } = env();
@@ -39,8 +40,19 @@ export const POST = withApi(async (request) => {
         patronymic: input.patronymic,
         password: input.password,
         role: "WORKER",
+        // Аккаунт ждёт подтверждения администратором: до этого момента
+        // доступа к данным пациентов у него нет.
+        isActive: false,
         workerProfile: { work: input.work, position: input.position },
     });
 
-    return json(toAccountDto(account), 201);
+    return json(
+        {
+            ...toAccountDto(account),
+            detail:
+                "Заявка принята. Доступ откроется после подтверждения " +
+                "администратором.",
+        },
+        201,
+    );
 });

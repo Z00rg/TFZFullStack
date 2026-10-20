@@ -110,6 +110,11 @@ export const workerProfileUpdateSchema = z
     });
 export type WorkerProfileUpdateInput = z.infer<typeof workerProfileUpdateSchema>;
 
+export const accountActivationSchema = z.object({
+    is_active: z.boolean(),
+});
+export type AccountActivationInput = z.infer<typeof accountActivationSchema>;
+
 /* ------------------------------------------------------------------ *
  * Пациенты
  * ------------------------------------------------------------------ */

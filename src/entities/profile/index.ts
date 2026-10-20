@@ -1,1 +1,5 @@
-export { useProfileQuery, useWorkerProfilesQuery } from "./queries";
+export {
+    useProfileQuery,
+    useWorkerProfilesQuery,
+    useSetAccountActiveMutation,
+} from "./queries";

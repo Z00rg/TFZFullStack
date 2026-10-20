@@ -42,7 +42,10 @@ export const POST = withApi(async (request) => {
     }
 
     if (!account.isActive) {
-        throw ApiError.forbidden("Учётная запись отключена.");
+        throw ApiError.forbidden(
+            "Учётная запись неактивна. Обратитесь к администратору: " +
+                "новые регистрации подтверждаются вручную.",
+        );
     }
 
     await resetRateLimit(`login:${ip}`);

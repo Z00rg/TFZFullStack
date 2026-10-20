@@ -54,6 +54,8 @@ export function useSignInForm() {
     return {
         register,
         errorMessage,
+        /** Пользователь только что зарегистрировался и ждёт подтверждения. */
+        isAwaitingApproval: searchParams.get("pending") === "1",
         handleSubmit: handleSubmit((data) => signInMutation.mutate(data)),
         isPending: signInMutation.isPending,
     };

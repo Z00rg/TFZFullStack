@@ -57,6 +57,41 @@ export function formatShortDate(value: string | null | undefined): string {
     return date ? SHORT_DATE_FORMATTER.format(date) : "—";
 }
 
+/**
+ * Склонение слова «год» по числу: 1 год, 2 года, 5 лет, 21 год, 44 года.
+ *
+ * Сокращение одной буквой здесь не годится: «21 г.» читается как «21 год»
+ * (верно), а «21 л.» — нет. Поэтому слово пишется целиком, и для всех
+ * возрастов форма получается правильная.
+ */
+export function pluralizeYears(count: number): string {
+    const lastTwo = Math.abs(count) % 100;
+    // 11–14 — исключение: «одиннадцать лет», а не «одиннадцать год».
+    if (lastTwo >= 11 && lastTwo <= 14) return "лет";
+
+    switch (Math.abs(count) % 10) {
+        case 1:
+            return "год";
+        case 2:
+        case 3:
+        case 4:
+            return "года";
+        default:
+            return "лет";
+    }
+}
+
+/** `41` → `41 год`, `54` → `54 года`, `25` → `25 лет`. */
+export function formatYears(count: number): string {
+    return `${count} ${pluralizeYears(count)}`;
+}
+
+/** Возраст по дате рождения в виде готовой строки: `41 год`. */
+export function formatAge(birthDate: string | null | undefined): string | null {
+    const age = calculateAge(birthDate);
+    return age === null ? null : formatYears(age);
+}
+
 /** Полных лет на текущую дату. */
 export function calculateAge(birthDate: string | null | undefined): number | null {
     const date = parse(birthDate);

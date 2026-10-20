@@ -1,7 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { accountApi } from "@/shared/api/accountApi";
+import { extractErrorMessage } from "@/shared/api/api-instance";
 import { queryKeys } from "@/shared/api/query-keys";
+import { queue } from "@/shared/ui/Toast";
 
 /** Профиль текущего пользователя. */
 export function useProfileQuery() {
@@ -19,5 +21,46 @@ export function useWorkerProfilesQuery({ enabled = true } = {}) {
         queryKey: queryKeys.workerProfiles.list(),
         queryFn: () => accountApi.getWorkerProfiles(),
         enabled,
+    });
+}
+
+/** Подтверждение заявки на регистрацию или блокировка сотрудника. */
+export function useSetAccountActiveMutation() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
+            accountApi.setAccountActive(id, isActive),
+        onSuccess: (account) => {
+            queryClient.invalidateQueries({
+                queryKey: queryKeys.workerProfiles.all,
+            });
+
+            queue.add(
+                {
+                    title: account.is_active
+                        ? "Доступ открыт"
+                        : "Доступ закрыт",
+                    description: account.is_active
+                        ? `${account.email} теперь может входить в систему`
+                        : `${account.email} больше не имеет доступа`,
+                    type: "success",
+                },
+                { timeout: 4000 },
+            );
+        },
+        onError: (error) => {
+            queue.add(
+                {
+                    title: "Статус не изменён",
+                    description: extractErrorMessage(
+                        error,
+                        "Не удалось изменить статус учётной записи",
+                    ),
+                    type: "error",
+                },
+                { timeout: 5000 },
+            );
+        },
     });
 }
